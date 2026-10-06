@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Student - Attendance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="api-config.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center">
+
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4 my-2">
+    <h1 class="text-xl font-bold text-center text-slate-800">QR Attendance System</h1>
+
+    <!-- Page Navigation -->
+    <nav class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold text-center">
+      <a href="index.html" class="py-2.5 rounded-lg text-slate-600 hover:text-slate-900">Scan QR</a>
+      <a href="find.html" class="py-2.5 rounded-lg text-white bg-indigo-600">Find Student</a>
+      <a href="register.html" class="py-2.5 rounded-lg text-slate-600 hover:text-slate-900">New Reg</a>
+    </nav>
+
+    <!-- Search Form -->
+    <div class="flex gap-2">
+      <input type="text" id="findIdInput" placeholder="Student ID (e.g. STU001)" class="flex-1 border p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <button onclick="handleManualSearch()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700">Search</button>
+    </div>
+
+    <!-- Result Card -->
+    <div id="resultCard" class="hidden border rounded-2xl p-4 space-y-3 bg-slate-50">
+      <div class="flex justify-between items-center">
+        <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white">Class</span>
+        <span id="cardId" class="text-xs font-mono text-slate-400">ID</span>
+      </div>
+      <h3 id="cardName" class="text-lg font-bold text-slate-800">First Last</h3>
+      <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700">Mark Present</button>
+    </div>
+
+    <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
+  </div>
+
+  <script>
+    let activeStudent = null;
+
+    async function handleManualSearch() {
+      const id = document.getElementById('findIdInput').value.trim();
+      if (!id) return showAlert('alertBanner', "Please enter a student ID", "red");
+
+      showAlert('alertBanner', "Searching...", "blue");
+      document.getElementById('resultCard').classList.add('hidden');
+
+      try {
+        const res = await getStudentById(id);
+        if (!res.success) {
+          showAlert('alertBanner', res.message, "red");
+          return;
+        }
+
+        activeStudent = res.student;
+        document.getElementById('cardName').innerText = `${activeStudent.firstName} ${activeStudent.lastName}`;
+        document.getElementById('cardId').innerText = `ID: ${activeStudent.id}`;
+        const badge = document.getElementById('cardClassBadge');
+        badge.innerText = activeStudent.className;
+        badge.style.backgroundColor = activeStudent.color || '#3b82f6';
+        
+        document.getElementById('resultCard').classList.remove('hidden');
+        showAlert('alertBanner', "", "hide");
+      } catch (err) {
+        showAlert('alertBanner', "Connection error", "red");
+      }
+    }
+
+    async function handleMarkPresent() {
+      if (!activeStudent) return;
+      showAlert('alertBanner', "Marking...", "blue");
+      try {
+        const res = await markAttendance(activeStudent);
+        showAlert('alertBanner', res.message, res.success ? "green" : "red");
+        if (res.success) {
+          document.getElementById('resultCard').classList.add('hidden');
+          document.getElementById('findIdInput').value = '';
+        }
+      } catch (e) {
+        showAlert('alertBanner', "Failed to mark attendance", "red");
+      }
+    }
+  </script>
+</body>
+</html>
