@@ -29,14 +29,17 @@
       <p id="cameraStatus" class="text-xs text-center text-slate-400">Requesting camera...</p>
     </div>
 
-    <!-- Student Details Result Card -->
-    <div id="resultCard" class="hidden border rounded-2xl p-4 space-y-3 bg-slate-50">
+    <!-- Student Details Result Card (Dynamic Colored Theme) -->
+    <div id="resultCard" class="hidden border-2 rounded-2xl p-5 space-y-3 transition-all duration-300">
       <div class="flex justify-between items-center">
-        <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white">Class</span>
-        <span id="cardId" class="text-xs font-mono text-slate-400">ID</span>
+        <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm">Class</span>
+        <span id="cardId" class="text-xs font-mono font-bold opacity-75">ID</span>
       </div>
-      <h3 id="cardName" class="text-lg font-bold text-slate-800">First Last</h3>
-      <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700">Mark Present</button>
+      <div>
+        <h3 id="cardName" class="text-xl font-extrabold text-slate-900">First Last</h3>
+        <p id="cardClassText" class="text-xs font-semibold opacity-80 mt-0.5">Class Name</p>
+      </div>
+      <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition shadow-md">Mark Present</button>
     </div>
 
     <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
@@ -108,16 +111,37 @@
           return;
         }
         activeStudent = res.student;
-        document.getElementById('cardName').innerText = `${activeStudent.firstName} ${activeStudent.lastName}`;
-        document.getElementById('cardId').innerText = `ID: ${activeStudent.id}`;
-        const badge = document.getElementById('cardClassBadge');
-        badge.innerText = activeStudent.className;
-        badge.style.backgroundColor = activeStudent.color || '#3b82f6';
-        document.getElementById('resultCard').classList.remove('hidden');
+        applyStudentCardTheme(activeStudent);
         showAlert('alertBanner', "", "hide");
       } catch (err) {
         showAlert('alertBanner', "Connection error", "red");
       }
+    }
+
+    function applyStudentCardTheme(student) {
+      const card = document.getElementById('resultCard');
+      const hexColor = student.color || '#3b82f6';
+
+      document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
+      document.getElementById('cardId').innerText = `ID: ${student.id}`;
+      document.getElementById('cardClassText').innerText = student.className;
+
+      const badge = document.getElementById('cardClassBadge');
+      badge.innerText = student.className;
+      badge.style.backgroundColor = hexColor;
+
+      // Apply 12% opacity tint to background and matching color to border
+      card.style.backgroundColor = hexToRgba(hexColor, 0.12);
+      card.style.borderColor = hexColor;
+      card.classList.remove('hidden');
+    }
+
+    function hexToRgba(hex, alpha) {
+      const cleanHex = hex.replace('#', '');
+      const r = parseInt(cleanHex.substring(0, 2), 16);
+      const g = parseInt(cleanHex.substring(2, 4), 16);
+      const b = parseInt(cleanHex.substring(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     async function handleMarkPresent() {
