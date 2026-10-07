@@ -8,6 +8,74 @@
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="api-config.js"></script>
 </head>
+  <!-- 1. Place this in the <head> or right before </body> to load the scanner library -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<!-- 2. HTML container where the camera stream displays -->
+<div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
+
+<!-- 3. Frontend Application Logic -->
+<script>
+  let html5QrcodeScanner;
+
+  // Step 2 & Step 3: Initialize and Start Camera with High Resolution Constraints
+  function startScanner() {
+    html5QrcodeScanner = new Html5Qrcode("reader");
+
+    // Camera Configuration & Constraints (Step 2)
+    const config = { 
+      fps: 15,                           // Higher frame rate for faster detection
+      qrbox: { width: 250, height: 250 },// Visual scanning window
+      aspectRatio: 1.0
+    };
+
+    // Video constraints (Forces environment/back camera & continuous focus)
+    const cameraConstraints = { 
+      facingMode: "environment",
+      advanced: [{ focusMode: "continuous" }]
+    };
+
+    // Start Scanning (Step 3)
+    html5QrcodeScanner.start(
+      cameraConstraints, 
+      config,
+      onScanSuccess,
+      onScanFailure
+    ).catch(err => {
+      console.error("Camera access failed or unavailable:", err);
+    });
+  }
+
+  // Action executed when a QR code is detected
+  async function onScanSuccess(decodedText) {
+    // Pause scanner to prevent duplicate scans
+    html5QrcodeScanner.pause(true);
+
+    const studentId = decodedText.trim();
+    console.log("Scanned ID:", studentId);
+
+    try {
+      // Calls your markAttendance function from api-config.js
+      const response = await markAttendance({ id: studentId });
+      alert(response.message);
+    } catch (err) {
+      console.error("Error submitting attendance:", err);
+      alert("Failed to record attendance. Please try again.");
+    } finally {
+      // Resume camera after 2 seconds
+      setTimeout(() => {
+        html5QrcodeScanner.resume();
+      }, 2000);
+    }
+  }
+
+  function onScanFailure(error) {
+    // Background scanning process - no action needed on failed frame reads
+  }
+
+  // Automatically launch camera when page finishes loading
+  window.addEventListener('DOMContentLoaded', startScanner);
+</script>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center">
 
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4 my-2">
