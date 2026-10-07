@@ -55,23 +55,27 @@
   </div>
 
   <script>
-    // Direct Frontend Color Matcher based on class name
+    // Direct Frontend Color Matcher
     function getClassColorByName(className) {
       if (!className) return '#3b82f6';
       
       const str = String(className).toLowerCase().trim();
 
+      // Check Part 1C / Black FIRST to ensure "1c" or "1 c" isn't misidentified
+      if (str.includes('1c') || str.includes('1 c') || str.includes('part 1c') || str.includes('part 1 c')) {
+        return '#000000'; // Black
+      }
+
       if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6'; // Blue
       if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444'; // Red
       if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899'; // Pink
-      if (str.includes('1c') || str.includes('part 1c'))       return '#6b7280'; // Gray
-      if (str.includes('part 2') || str.endsWith('2'))         return '#f97316'; // Orange
-      if (str.includes('part 3') || str.endsWith('3'))         return '#8b5cf6'; // Purple
-      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4')) return '#10b981'; // Green
-      if (str.includes('part 6') || str.endsWith('6'))         return '#eab308'; // Yellow
+      if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316'; // Orange
+      if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6'; // Purple
+      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981'; // Green
+      if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308'; // Yellow
       if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e'; // Brown
 
-      return '#6b7280'; // Fallback Default
+      return '#3b82f6'; // Fallback Default
     }
 
     async function handleSearch() {
@@ -105,9 +109,8 @@
       container.innerHTML = '';
 
       students.forEach(student => {
-        // Evaluate class color directly in JavaScript
         const hexColor = getClassColorByName(student.className);
-        const bgColor = hexToRgba(hexColor, 0.15);
+        const bgColor = hexToRgba(hexColor, 0.08); // Slight tint background for black
 
         const card = document.createElement('div');
         card.className = "border-2 rounded-2xl p-4 space-y-3 transition-all duration-300 shadow-sm";
@@ -120,50 +123,8 @@
             <span class="text-xs font-mono font-bold" style="color: ${hexColor}">ID: ${student.id}</span>
           </div>
           <div>
-            <h3 class="text-lg font-extrabold text-slate-900">${student.firstName} ${student.lastName}</h3>
+            <h3 class="text-lg font-extrabold text-slate-900">${student.firstName}${student.lastName}</h3>
             <p class="text-xs font-bold mt-0.5" style="color: ${hexColor}">${student.className}</p>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick='markStudentPresent(${JSON.stringify(student)})' class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition text-sm shadow-md">
-              Mark Present
-            </button>
-            <button onclick="goToHome()" class="w-full bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold hover:bg-slate-300 transition text-sm">
-              Cancel
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    function goToHome() {
-      window.location.href = 'index.html';
-    }
-
-    function hexToRgba(hex, alpha) {
-      const cleanHex = hex.replace('#', '');
-      const r = parseInt(cleanHex.substring(0, 2), 16);
-      const g = parseInt(cleanHex.substring(2, 4), 16);
-      const b = parseInt(cleanHex.substring(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    async function markStudentPresent(student) {
-      showAlert('alertBanner', `Marking ${student.firstName}...`, "blue");
-      try {
-        const res = await markAttendance(student);
-        if (res.success) {
-          showAlert('alertBanner', `${res.message}. Redirecting...`, "green");
-          setTimeout(() => {
-            goToHome();
-          }, 1200);
-        } else {
-          showAlert('alertBanner', res.message, "red");
-        }
-      } catch (e) {
-        showAlert('alertBanner', "Failed to mark attendance", "red");
-      }
-    }
-  </script>
-</body>
-</html>
+            <button onclick='markStudentPresent
