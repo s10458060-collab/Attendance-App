@@ -55,6 +55,25 @@
   </div>
 
   <script>
+    // Direct Frontend Color Matcher based on class name
+    function getClassColorByName(className) {
+      if (!className) return '#3b82f6';
+      
+      const str = String(className).toLowerCase().trim();
+
+      if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6'; // Blue
+      if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444'; // Red
+      if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899'; // Pink
+      if (str.includes('1c') || str.includes('part 1c'))       return '#6b7280'; // Gray
+      if (str.includes('part 2') || str.endsWith('2'))         return '#f97316'; // Orange
+      if (str.includes('part 3') || str.endsWith('3'))         return '#8b5cf6'; // Purple
+      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4')) return '#10b981'; // Green
+      if (str.includes('part 6') || str.endsWith('6'))         return '#eab308'; // Yellow
+      if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e'; // Brown
+
+      return '#3b82f6'; // Fallback Default
+    }
+
     async function handleSearch() {
       const id = document.getElementById('findIdInput').value.trim();
       const firstName = document.getElementById('findFirstInput').value.trim();
@@ -86,22 +105,23 @@
       container.innerHTML = '';
 
       students.forEach(student => {
-        const hexColor = student.color || '#3b82f6';
-        const bgColor = hexToRgba(hexColor, 0.12);
+        // Evaluate class color directly in JavaScript
+        const hexColor = getClassColorByName(student.className);
+        const bgColor = hexToRgba(hexColor, 0.15);
 
         const card = document.createElement('div');
-        card.className = "border-2 rounded-2xl p-4 space-y-3 transition-all duration-300";
+        card.className = "border-2 rounded-2xl p-4 space-y-3 transition-all duration-300 shadow-sm";
         card.style.backgroundColor = bgColor;
         card.style.borderColor = hexColor;
 
         card.innerHTML = `
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm" style="background-color: ${hexColor}">${student.className}</span>
-            <span class="text-xs font-mono font-bold opacity-75">ID: ${student.id}</span>
+            <span class="text-xs font-mono font-bold" style="color: ${hexColor}">ID: ${student.id}</span>
           </div>
           <div>
             <h3 class="text-lg font-extrabold text-slate-900">${student.firstName} ${student.lastName}</h3>
-            <p class="text-xs font-semibold opacity-80 mt-0.5">${student.className}</p>
+            <p class="text-xs font-bold mt-0.5" style="color: ${hexColor}">${student.className}</p>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button onclick='markStudentPresent(${JSON.stringify(student)})' class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition text-sm shadow-md">
