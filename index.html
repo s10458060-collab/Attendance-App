@@ -44,24 +44,27 @@
 
     <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
   </div>
-
-  <script>
+<script>
   let videoStream = null;
   let scanningActive = false;
   let activeStudent = null;
 
-  // Class Color Map matching your sheet tabs
-  const CLASS_COLORS = {
-    'KG': '#f87171',          // Red / Coral
-    'Class 1': '#fb923c',     // Orange
-    'Class 2': '#fbbf24',     // Amber / Yellow
-    'Class 3': '#4ade80',     // Green
-    'Class 4': '#38bdf8',     // Sky Blue
-    'Class 5': '#818cf8',     // Indigo
-    'Class 6': '#c084fc',     // Purple
-    'Class 7': '#f472b6',     // Pink
-    'Class 8': '#a3e635'      // Lime
-  };
+  // Exact class tab color resolver from Find page
+  function getClassColor(className) {
+    if (!className) return '#3b82f6'; // Fallback Default
+    const str = String(className).toLowerCase().trim();
+
+    if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6'; // Blue
+    if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444'; // Red
+    if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899'; // Pink
+    if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316'; // Orange
+    if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6'; // Purple
+    if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981'; // Green
+    if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308'; // Yellow
+    if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e'; // Brown
+
+    return '#3b82f6'; // Fallback Default
+  }
 
   window.addEventListener('DOMContentLoaded', startCamera);
 
@@ -143,10 +146,10 @@
 
   function applyStudentCardTheme(student) {
     const card = document.getElementById('resultCard');
-    
-    // Resolve color from student object or match by class name
     const className = student.className || student.class || 'Class';
-    const hexColor = student.color || CLASS_COLORS[className] || '#3b82f6';
+    
+    // Evaluates your custom class rules first
+    const hexColor = getClassColor(className);
 
     document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
     document.getElementById('cardId').innerText = `ID: ${student.id}`;
@@ -156,7 +159,6 @@
     badge.innerText = className;
     badge.style.backgroundColor = hexColor;
 
-    // Apply color tint and border matching the Find page
     card.style.backgroundColor = hexToRgba(hexColor, 0.12);
     card.style.borderColor = hexColor;
     card.classList.remove('hidden');
@@ -207,5 +209,5 @@
     banner.innerText = msg;
   }
 </script>
-</body>
+ </body>
 </html>
