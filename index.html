@@ -8,74 +8,6 @@
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="api-config.js"></script>
 </head>
-  <!-- 1. Place this in the <head> or right before </body> to load the scanner library -->
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<!-- 2. HTML container where the camera stream displays -->
-<div id="reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
-
-<!-- 3. Frontend Application Logic -->
-<script>
-  let html5QrcodeScanner;
-
-  // Step 2 & Step 3: Initialize and Start Camera with High Resolution Constraints
-  function startScanner() {
-    html5QrcodeScanner = new Html5Qrcode("reader");
-
-    // Camera Configuration & Constraints (Step 2)
-    const config = { 
-      fps: 15,                           // Higher frame rate for faster detection
-      qrbox: { width: 250, height: 250 },// Visual scanning window
-      aspectRatio: 1.0
-    };
-
-    // Video constraints (Forces environment/back camera & continuous focus)
-    const cameraConstraints = { 
-      facingMode: "environment",
-      advanced: [{ focusMode: "continuous" }]
-    };
-
-    // Start Scanning (Step 3)
-    html5QrcodeScanner.start(
-      cameraConstraints, 
-      config,
-      onScanSuccess,
-      onScanFailure
-    ).catch(err => {
-      console.error("Camera access failed or unavailable:", err);
-    });
-  }
-
-  // Action executed when a QR code is detected
-  async function onScanSuccess(decodedText) {
-    // Pause scanner to prevent duplicate scans
-    html5QrcodeScanner.pause(true);
-
-    const studentId = decodedText.trim();
-    console.log("Scanned ID:", studentId);
-
-    try {
-      // Calls your markAttendance function from api-config.js
-      const response = await markAttendance({ id: studentId });
-      alert(response.message);
-    } catch (err) {
-      console.error("Error submitting attendance:", err);
-      alert("Failed to record attendance. Please try again.");
-    } finally {
-      // Resume camera after 2 seconds
-      setTimeout(() => {
-        html5QrcodeScanner.resume();
-      }, 2000);
-    }
-  }
-
-  function onScanFailure(error) {
-    // Background scanning process - no action needed on failed frame reads
-  }
-
-  // Automatically launch camera when page finishes loading
-  window.addEventListener('DOMContentLoaded', startScanner);
-</script>
 <body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center">
 
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4 my-2">
@@ -91,13 +23,13 @@
     <!-- Scan View Content -->
     <div class="space-y-3">
       <div class="relative w-full aspect-square bg-black rounded-xl overflow-hidden flex items-center justify-center">
-        <video id="qr-video" playsinline autoplay muted width="100%" height="100%"></video>
+        <video id="qr-video" playsinline autoplay muted class="w-full h-full object-cover"></video>
         <canvas id="canvas" class="hidden"></canvas>
       </div>
       <p id="cameraStatus" class="text-xs text-center text-slate-400">Requesting camera...</p>
     </div>
 
-    <!-- Student Details Result Card (Dynamic Colored Theme) -->
+    <!-- Student Details Result Card -->
     <div id="resultCard" class="hidden border-2 rounded-2xl p-5 space-y-3 transition-all duration-300">
       <div class="flex justify-between items-center">
         <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm">Class</span>
@@ -122,17 +54,21 @@
 
     async function startCamera() {
       stopCamera();
-      const video = document.getElementById('video');
+      const video = document.getElementById('qr-video');
+      
       try {
-        videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } });
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { ideal: "environment" } } 
+        });
       } catch (e) {
         try {
           videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
         } catch (err) {
-          document.getElementById('cameraStatus').innerText = "Camera access denied.";
+          document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
           return;
         }
       }
+
       video.srcObject = videoStream;
       video.play();
       scanningActive = true;
@@ -150,7 +86,8 @@
 
     function scanFrame() {
       if (!scanningActive) return;
-      const video = document.getElementById('video');
+      
+      const video = document.getElementById('qr-video');
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
 
@@ -158,11 +95,13 @@
         canvas.height = video.videoHeight;
         canvas.width = video.videoWidth;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
 
         if (code && code.data) {
           scanningActive = false;
-          fetchStudent(code.data);
+          fetchStudent(code.data.trim());
           return;
         }
       }
@@ -170,19 +109,22 @@
     }
 
     async function fetchStudent(id) {
-      showAlert('alertBanner', "Searching student...", "blue");
+      showAlert("Searching student...", "blue");
       try {
-        const res = await getStudentById(id);
-        if (!res.success) {
-          showAlert('alertBanner', res.message, "red");
+        const res = await searchStudentsApi({ id: id });
+        
+        if (!res.success || !res.students || res.students.length === 0) {
+          showAlert(res.message || "Student not found.", "red");
           setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
           return;
         }
-        activeStudent = res.student;
+
+        activeStudent = res.students[0];
         applyStudentCardTheme(activeStudent);
-        showAlert('alertBanner', "", "hide");
+        showAlert("", "hide");
       } catch (err) {
-        showAlert('alertBanner', "Connection error", "red");
+        showAlert("Connection error while fetching student details.", "red");
+        setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
       }
     }
 
@@ -192,13 +134,12 @@
 
       document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
       document.getElementById('cardId').innerText = `ID: ${student.id}`;
-      document.getElementById('cardClassText').innerText = student.className;
+      document.getElementById('cardClassText').innerText = student.className || 'Class';
 
       const badge = document.getElementById('cardClassBadge');
-      badge.innerText = student.className;
+      badge.innerText = student.className || 'Class';
       badge.style.backgroundColor = hexColor;
 
-      // Apply 12% opacity tint to background and matching color to border
       card.style.backgroundColor = hexToRgba(hexColor, 0.12);
       card.style.borderColor = hexColor;
       card.classList.remove('hidden');
@@ -206,25 +147,47 @@
 
     function hexToRgba(hex, alpha) {
       const cleanHex = hex.replace('#', '');
-      const r = parseInt(cleanHex.substring(0, 2), 16);
-      const g = parseInt(cleanHex.substring(2, 4), 16);
-      const b = parseInt(cleanHex.substring(4, 6), 16);
+      const r = parseInt(cleanHex.substring(0, 2), 16) || 59;
+      const g = parseInt(cleanHex.substring(2, 4), 16) || 130;
+      const b = parseInt(cleanHex.substring(4, 6), 16) || 246;
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     async function handleMarkPresent() {
       if (!activeStudent) return;
-      showAlert('alertBanner', "Marking...", "blue");
+      showAlert("Marking attendance...", "blue");
+
       try {
         const res = await markAttendance(activeStudent);
-        showAlert('alertBanner', res.message, res.success ? "green" : "red");
+        showAlert(res.message, res.success ? "green" : "red");
+        
         if (res.success) {
           document.getElementById('resultCard').classList.add('hidden');
-          setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
+          setTimeout(() => { 
+            showAlert("", "hide");
+            scanningActive = true; 
+            scanFrame(); 
+          }, 2000);
         }
       } catch (e) {
-        showAlert('alertBanner', "Failed to mark attendance", "red");
+        showAlert("Failed to mark attendance", "red");
       }
+    }
+
+    function showAlert(msg, type) {
+      const banner = document.getElementById('alertBanner');
+      if (type === "hide") {
+        banner.classList.add('hidden');
+        return;
+      }
+
+      banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
+
+      if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
+      if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
+      if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
+
+      banner.innerText = msg;
     }
   </script>
 </body>
