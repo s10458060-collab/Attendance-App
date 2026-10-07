@@ -36,3 +36,32 @@ async function markAttendance(data) {
     return { success: false, message: "Network error or server unavailable." };
   }
 }
+async function handleSearch() {
+  const errorBanner = document.getElementById('errorBanner'); // Adjust ID to match your error banner element
+  const studentResultsContainer = document.getElementById('studentResults');
+
+  // 1. Clear previous error messages before fetching
+  if (errorBanner) {
+    errorBanner.style.display = 'none';
+    errorBanner.innerText = '';
+  }
+
+  const queryData = {
+    id: document.getElementById('studentIdInput').value,
+    firstName: document.getElementById('firstNameInput').value,
+    lastName: document.getElementById('lastNameInput').value
+  };
+
+  const response = await searchStudentsApi(queryData);
+
+  if (response.success && response.students) {
+    // Render student cards
+    renderStudentCards(response.students);
+  } else {
+    // Display error message only if the request failed or returned no results
+    if (errorBanner) {
+      errorBanner.innerText = response.message || "Error searching student. Please try again.";
+      errorBanner.style.display = 'block';
+    }
+  }
+}
