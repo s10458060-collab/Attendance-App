@@ -29,191 +29,201 @@
       <p id="cameraStatus" class="text-xs text-center text-slate-400">Requesting camera...</p>
     </div>
 
-   <!-- Student Details Result Card (Dynamic Colored Theme) -->
-<div id="resultCard" class="hidden border-2 rounded-2xl p-5 space-y-3 transition-all duration-300">
-  <div class="flex justify-between items-center">
-    <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm">Class</span>
-    <span id="cardId" class="text-xs font-mono font-bold opacity-75">ID</span>
+    <!-- Student Details Result Card -->
+    <div id="resultCard" class="hidden border-2 rounded-2xl p-5 space-y-3 transition-all duration-300">
+      <div class="flex justify-between items-center">
+        <span id="cardClassBadge" class="text-xs font-bold px-3 py-1 rounded-full text-white shadow-sm">Class</span>
+        <span id="cardId" class="text-xs font-mono font-bold opacity-75">ID</span>
+      </div>
+      <div>
+        <h3 id="cardName" class="text-xl font-extrabold text-slate-900">First Last</h3>
+        <p id="cardClassText" class="text-xs font-semibold opacity-80 mt-0.5">Class Name</p>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition shadow-md">
+          Mark Present
+        </button>
+        <button id="btnCancelScan" onclick="handleCancelScan()" class="w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <div id="alertBanner" class="hidden p-3 rounded-xl text-xs text-center font-semibold"></div>
   </div>
-  <div>
-    <h3 id="cardName" class="text-xl font-extrabold text-slate-900">First Last</h3>
-    <p id="cardClassText" class="text-xs font-semibold opacity-80 mt-0.5">Class Name</p>
-  </div>
-  
-  <!-- Action Buttons (Mark Present + Cancel) -->
-  <div class="grid grid-cols-2 gap-2 pt-1">
-    <button id="btnMarkPresent" onclick="handleMarkPresent()" class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition shadow-md">
-      Mark Present
-    </button>
-    <button id="btnCancelScan" onclick="handleCancelScan()" class="w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-300 transition">
-      Cancel
-    </button>
-  </div>
-</div>
-<script>
-  let videoStream = null;
-  let scanningActive = false;
-  let activeStudent = null;
 
-  // Exact class tab color resolver from Find page
-  function getClassColor(className) {
-    if (!className) return '#3b82f6'; // Fallback Default
-    const str = String(className).toLowerCase().trim();
+  <script>
+    let videoStream = null;
+    let scanningActive = false;
+    let activeStudent = null;
 
-    if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6'; // Blue
-    if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444'; // Red
-    if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899'; // Pink
-    if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316'; // Orange
-    if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6'; // Purple
-    if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981'; // Green
-    if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308'; // Yellow
-    if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e'; // Brown
+    function getClassColor(className) {
+      if (!className) return '#3b82f6';
+      const str = String(className).toLowerCase().trim();
 
-    return '#3b82f6'; // Fallback Default
-  }
+      if (str.includes('below 4') || str.includes('4 below')) return '#3b82f6';
+      if (str.includes('1a') || str.includes('part 1a'))       return '#ef4444';
+      if (str.includes('1b') || str.includes('part 1b'))       return '#ec4899';
+      if (str.includes('part 2') || str.includes('part-2') || str.endsWith('2')) return '#f97316';
+      if (str.includes('part 3') || str.includes('part-3') || str.endsWith('3')) return '#8b5cf6';
+      if (str.includes('4-5') || str.includes('4/5') || str.includes('part 4'))   return '#10b981';
+      if (str.includes('part 6') || str.includes('part-6') || str.endsWith('6')) return '#eab308';
+      if (str.includes('pronou') || str.includes('pronu'))     return '#854d0e';
 
-  window.addEventListener('DOMContentLoaded', startCamera);
+      return '#3b82f6';
+    }
 
-  async function startCamera() {
-    stopCamera();
-    const video = document.getElementById('qr-video');
-    
-    try {
-      videoStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: { ideal: "environment" } } 
-      });
-    } catch (e) {
+    window.addEventListener('DOMContentLoaded', startCamera);
+
+    async function startCamera() {
+      stopCamera();
+      const video = document.getElementById('qr-video');
+      
       try {
-        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { ideal: "environment" } } 
+        });
+      } catch (e) {
+        try {
+          videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } catch (err) {
+          document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
+          return;
+        }
+      }
+
+      video.srcObject = videoStream;
+      video.play();
+      scanningActive = true;
+      requestAnimationFrame(scanFrame);
+      document.getElementById('cameraStatus').innerText = "Scanning active...";
+    }
+
+    function stopCamera() {
+      scanningActive = false;
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+    }
+
+    function scanFrame() {
+      if (!scanningActive) return;
+      
+      const video = document.getElementById('qr-video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+        if (code && code.data) {
+          scanningActive = false;
+          fetchStudent(code.data.trim());
+          return;
+        }
+      }
+      requestAnimationFrame(scanFrame);
+    }
+
+    async function fetchStudent(id) {
+      showAlert("Searching student...", "blue");
+      try {
+        const res = await searchStudentsApi({ id: id });
+        
+        if (!res.success || !res.students || res.students.length === 0) {
+          showAlert(res.message || "Student not found.", "red");
+          setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
+          return;
+        }
+
+        activeStudent = res.students[0];
+        applyStudentCardTheme(activeStudent);
+        showAlert("", "hide");
       } catch (err) {
-        document.getElementById('cameraStatus').innerText = "Camera access denied or unavailable.";
-        return;
-      }
-    }
-
-    video.srcObject = videoStream;
-    video.play();
-    scanningActive = true;
-    requestAnimationFrame(scanFrame);
-    document.getElementById('cameraStatus').innerText = "Scanning active...";
-  }
-
-  function stopCamera() {
-    scanningActive = false;
-    if (videoStream) {
-      videoStream.getTracks().forEach(track => track.stop());
-      videoStream = null;
-    }
-  }
-
-  function scanFrame() {
-    if (!scanningActive) return;
-    
-    const video = document.getElementById('qr-video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.height = video.videoHeight;
-      canvas.width = video.videoWidth;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-      if (code && code.data) {
-        scanningActive = false;
-        fetchStudent(code.data.trim());
-        return;
-      }
-    }
-    requestAnimationFrame(scanFrame);
-  }
-
-  async function fetchStudent(id) {
-    showAlert("Searching student...", "blue");
-    try {
-      const res = await searchStudentsApi({ id: id });
-      
-      if (!res.success || !res.students || res.students.length === 0) {
-        showAlert(res.message || "Student not found.", "red");
+        showAlert("Connection error while fetching student details.", "red");
         setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
+      }
+    }
+
+    function applyStudentCardTheme(student) {
+      const card = document.getElementById('resultCard');
+      const className = student.className || student.class || 'Class';
+      const hexColor = getClassColor(className);
+
+      document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
+      document.getElementById('cardId').innerText = `ID: ${student.id}`;
+      document.getElementById('cardClassText').innerText = className;
+
+      const badge = document.getElementById('cardClassBadge');
+      badge.innerText = className;
+      badge.style.backgroundColor = hexColor;
+
+      card.style.backgroundColor = hexToRgba(hexColor, 0.12);
+      card.style.borderColor = hexColor;
+      card.classList.remove('hidden');
+    }
+
+    function hexToRgba(hex, alpha) {
+      const cleanHex = hex.replace('#', '');
+      const r = parseInt(cleanHex.substring(0, 2), 16) || 59;
+      const g = parseInt(cleanHex.substring(2, 4), 16) || 130;
+      const b = parseInt(cleanHex.substring(4, 6), 16) || 246;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    async function handleMarkPresent() {
+      if (!activeStudent) return;
+      showAlert("Marking attendance...", "blue");
+
+      try {
+        const res = await markAttendance(activeStudent);
+        showAlert(res.message, res.success ? "green" : "red");
+        
+        if (res.success) {
+          document.getElementById('resultCard').classList.add('hidden');
+          setTimeout(() => { 
+            showAlert("", "hide");
+            scanningActive = true; 
+            scanFrame(); 
+          }, 2000);
+        }
+      } catch (e) {
+        showAlert("Failed to mark attendance", "red");
+      }
+    }
+
+    function handleCancelScan() {
+      activeStudent = null;
+      document.getElementById('resultCard').classList.add('hidden');
+      showAlert("", "hide");
+      scanningActive = true;
+      scanFrame();
+      document.getElementById('cameraStatus').innerText = "Scanning active...";
+    }
+
+    function showAlert(msg, type) {
+      const banner = document.getElementById('alertBanner');
+      if (type === "hide") {
+        banner.classList.add('hidden');
         return;
       }
 
-      activeStudent = res.students[0];
-      applyStudentCardTheme(activeStudent);
-      showAlert("", "hide");
-    } catch (err) {
-      showAlert("Connection error while fetching student details.", "red");
-      setTimeout(() => { scanningActive = true; scanFrame(); }, 2000);
+      banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
+
+      if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
+      if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
+      if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
+
+      banner.innerText = msg;
     }
-  }
-
-  function applyStudentCardTheme(student) {
-    const card = document.getElementById('resultCard');
-    const className = student.className || student.class || 'Class';
-    
-    // Evaluates your custom class rules first
-    const hexColor = getClassColor(className);
-
-    document.getElementById('cardName').innerText = `${student.firstName} ${student.lastName}`;
-    document.getElementById('cardId').innerText = `ID: ${student.id}`;
-    document.getElementById('cardClassText').innerText = className;
-
-    const badge = document.getElementById('cardClassBadge');
-    badge.innerText = className;
-    badge.style.backgroundColor = hexColor;
-
-    card.style.backgroundColor = hexToRgba(hexColor, 0.12);
-    card.style.borderColor = hexColor;
-    card.classList.remove('hidden');
-  }
-
-  function hexToRgba(hex, alpha) {
-    const cleanHex = hex.replace('#', '');
-    const r = parseInt(cleanHex.substring(0, 2), 16) || 59;
-    const g = parseInt(cleanHex.substring(2, 4), 16) || 130;
-    const b = parseInt(cleanHex.substring(4, 6), 16) || 246;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  async function handleMarkPresent() {
-    if (!activeStudent) return;
-    showAlert("Marking attendance...", "blue");
-
-    try {
-      const res = await markAttendance(activeStudent);
-      showAlert(res.message, res.success ? "green" : "red");
-      
-      if (res.success) {
-        document.getElementById('resultCard').classList.add('hidden');
-        setTimeout(() => { 
-          showAlert("", "hide");
-          scanningActive = true; 
-          scanFrame(); 
-        }, 2000);
-      }
-    } catch (e) {
-      showAlert("Failed to mark attendance", "red");
-    }
-  }
-
-  function showAlert(msg, type) {
-    const banner = document.getElementById('alertBanner');
-    if (type === "hide") {
-      banner.classList.add('hidden');
-      return;
-    }
-
-    banner.classList.remove('hidden', 'bg-blue-100', 'text-blue-800', 'bg-red-100', 'text-red-800', 'bg-emerald-100', 'text-emerald-800');
-
-    if (type === "blue") banner.classList.add('bg-blue-100', 'text-blue-800');
-    if (type === "red") banner.classList.add('bg-red-100', 'text-red-800');
-    if (type === "green") banner.classList.add('bg-emerald-100', 'text-emerald-800');
-
-    banner.innerText = msg;
-  }
-</script>
- </body>
+  </script>
+</body>
 </html>
